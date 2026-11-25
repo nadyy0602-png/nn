@@ -1,0 +1,1587 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ألبومي - معرض الصور الذكي</title>
+    
+    <!-- استدعاء خطوط جوجل العربية الأنيقة (Cairo & Tajawal) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- استدعاء مكتبة Tailwind CSS للتصميم المتجاوب والحديث -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Cairo', 'Tajawal', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: {
+                            50: '#f0fdfa',
+                            100: '#ccfbf1',
+                            400: '#2dd4bf',
+                            500: '#14b8a6',
+                            600: '#0d9488',
+                            700: '#0f766e',
+                        },
+                        gold: {
+                            400: '#fbbf24',
+                            500: '#f59e0b',
+                            600: '#d97706',
+                        }
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.25s ease-out forwards',
+                        'scale-up': 'scaleUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                        'slide-in-right': 'slideInRight 0.3s ease-out forwards',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        scaleUp: {
+                            '0%': { opacity: '0', transform: 'scale(0.95)' },
+                            '100%': { opacity: '1', transform: 'scale(1)' },
+                        },
+                        slideInRight: {
+                            '0%': { transform: 'translateX(100%)' },
+                            '100%': { transform: 'translateX(0)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* تخصيص شريط التمرير ليتناسب مع التصميم العصري */
+        ::-webkit-scrollbar {
+            width: 7px;
+            height: 7px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(156, 163, 175, 0.4);
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(156, 163, 175, 0.7);
+        }
+
+        /* منع تحديد النص أثناء سحب الصورة المكبرة في العارض */
+        .no-select {
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* تأثير السحب والإفلات على الشاشة */
+        .drag-overlay {
+            background: rgba(13, 148, 136, 0.12);
+            backdrop-filter: blur(4px);
+            border: 3px dashed #0d9488;
+        }
+    </style>
+</head>
+<body class="bg-[#F4F7F6] text-slate-800 dark:bg-[#0B1120] dark:text-slate-100 font-sans antialiased transition-colors duration-200 overflow-x-hidden">
+
+    <!-- طبقة السحب والإفلات العالمية لإضافة الصور من أي مكان -->
+    <div id="globalDropZone" class="fixed inset-0 z-50 hidden items-center justify-center drag-overlay pointer-events-none">
+        <div class="bg-white dark:bg-[#1E293B] p-8 rounded-3xl shadow-2xl text-center border border-teal-200 dark:border-teal-800 animate-scale-up">
+            <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-teal-100 dark:bg-teal-900/50 text-teal-600 dark:text-teal-400 flex items-center justify-center">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+            </div>
+            <h3 class="text-xl font-bold mb-1">أفلت الصور هنا لإضافتها فوراً</h3>
+            <p class="text-sm text-slate-500 dark:text-slate-400">سيتم حفظ الصور في معرضك بجودة عالية</p>
+        </div>
+    </div>
+
+    <!-- حاوية التطبيق الرئيسية -->
+    <div class="flex min-h-screen">
+        
+        <!-- خلفية معتمة للقائمة الجانبية على الموبايل -->
+        <div id="sidebarBackdrop" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-30 hidden lg:hidden transition-opacity" onclick="toggleSidebar()"></div>
+
+        <!-- القائمة الجانبية (Sidebar) -->
+        <aside id="sidebar" class="fixed lg:sticky top-0 right-0 z-40 h-screen w-72 bg-white dark:bg-[#131C31] border-l border-slate-200/80 dark:border-slate-800 flex flex-col transition-transform duration-300 translate-x-full lg:translate-x-0 shadow-xl lg:shadow-none">
+            
+            <!-- شعار التطبيق -->
+            <div class="p-6 flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#0F766E] to-[#0D9488] flex items-center justify-center text-white shadow-lg shadow-teal-600/30">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-extrabold tracking-tight bg-gradient-to-l from-[#0F766E] to-[#14B8A6] dark:from-[#2DD4BF] dark:to-emerald-300 bg-clip-text text-transparent">ألبومي</h1>
+                        <p class="text-[11px] text-slate-400 font-medium">معرض الصور الذكي</p>
+                    </div>
+                </div>
+                <button onclick="toggleSidebar()" class="lg:hidden p-2 rounded-xl text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <!-- زر رفع صور سريع -->
+            <div class="px-4 pt-5 pb-2">
+                <button onclick="openUploadModal()" class="w-full py-3 px-4 rounded-2xl bg-[#0D9488] hover:bg-[#0F766E] dark:bg-[#2DD4BF] dark:hover:bg-teal-300 dark:text-slate-950 active:scale-[0.98] text-white font-bold shadow-lg shadow-teal-600/25 flex items-center justify-center gap-2 transition-all">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    <span>إضافة صور جديدة</span>
+                </button>
+            </div>
+
+            <!-- روابط التنقل الأساسية -->
+            <nav class="flex-1 overflow-y-auto px-3 py-3 space-y-1">
+                <button onclick="navigate('home')" data-nav="home" class="nav-btn w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold transition-all">
+                    <div class="flex items-center gap-3">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                        <span>الرئيسية</span>
+                    </div>
+                </button>
+
+                <button onclick="navigate('all')" data-nav="all" class="nav-btn w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold transition-all">
+                    <div class="flex items-center gap-3">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+                        <span>كل الصور</span>
+                    </div>
+                    <span id="count-all" class="text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">0</span>
+                </button>
+
+                <button onclick="navigate('favorites')" data-nav="favorites" class="nav-btn w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold transition-all">
+                    <div class="flex items-center gap-3">
+                        <svg class="w-5 h-5 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+                        <span>المفضلة</span>
+                    </div>
+                    <span id="count-fav" class="text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">0</span>
+                </button>
+
+                <button onclick="navigate('albums')" data-nav="albums" class="nav-btn w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold transition-all">
+                    <div class="flex items-center gap-3">
+                        <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                        <span>الألبومات</span>
+                    </div>
+                    <span id="count-albums" class="text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">0</span>
+                </button>
+
+                <!-- قسم الألبومات السريعة داخل القائمة الجانبية -->
+                <div class="pt-4 pb-1 px-4 flex items-center justify-between">
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-400">ألبوماتي</span>
+                    <button onclick="openCreateAlbumModal()" title="إنشاء ألبوم جديد" class="p-1 rounded-lg text-[#0D9488] dark:text-[#2DD4BF] hover:bg-teal-50 dark:hover:bg-teal-900/30 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
+                    </button>
+                </div>
+                <div id="sidebarAlbumsList" class="space-y-1 max-h-48 overflow-y-auto pr-1">
+                    <!-- يتم تعبئة الألبومات ديناميكياً هنا -->
+                </div>
+
+                <div class="my-3 border-t border-slate-100 dark:border-slate-800"></div>
+
+                <button onclick="navigate('trash')" data-nav="trash" class="nav-btn w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold transition-all">
+                    <div class="flex items-center gap-3">
+                        <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        <span>سلة المحذوفات</span>
+                    </div>
+                    <span id="count-trash" class="text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">0</span>
+                </button>
+            </nav>
+
+            <!-- تذييل القائمة الجانبية: حالة التخزين وزر الوضع الليلي -->
+            <div class="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-[#0B1120]/50">
+                <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-3">
+                    <span>التخزين المحلي (IndexedDB)</span>
+                    <span id="storageSizeBadge" class="font-bold text-[#0D9488] dark:text-[#2DD4BF]">0 MB</span>
+                </div>
+                <button onclick="toggleTheme()" class="w-full py-2.5 px-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#1E293B] hover:bg-slate-50 dark:hover:bg-slate-700 text-sm font-semibold flex items-center justify-center gap-2 transition-colors">
+                    <span id="themeIconSun" class="hidden dark:inline-flex items-center gap-2 text-amber-400">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                        الوضع النهاري
+                    </span>
+                    <span id="themeIconMoon" class="inline-flex dark:hidden items-center gap-2 text-slate-700">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+                        الوضع الليلي
+                    </span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- المحتوى الرئيسي للتطبيق -->
+        <main class="flex-1 flex flex-col min-w-0">
+            
+            <!-- الشريط العلوي (Top Header) -->
+            <header class="sticky top-0 z-20 bg-white/85 dark:bg-[#131C31]/85 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/80 px-4 sm:px-8 py-4">
+                <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
+                    
+                    <!-- زر فتح القائمة على الموبايل + عنوان الصفحة الحالية -->
+                    <div class="flex items-center gap-3">
+                        <button onclick="toggleSidebar()" class="lg:hidden p-2.5 rounded-xl bg-slate-100 dark:bg-[#1E293B] text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                        </button>
+                        <div>
+                            <h2 id="pageTitle" class="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">الرئيسية</h2>
+                            <p id="pageSubtitle" class="text-xs sm:text-sm text-slate-500 dark:text-slate-400">مرحباً بك في معرض صورك الشخصي</p>
+                        </div>
+                    </div>
+
+                    <!-- شريط البحث الفوري وأدوات الفرز -->
+                    <div class="flex items-center gap-2 sm:gap-3 flex-1 sm:flex-initial justify-end max-w-xl w-full sm:w-auto">
+                        <!-- حقل البحث -->
+                        <div class="relative flex-1 sm:w-64 md:w-72">
+                            <input type="text" id="searchInput" oninput="handleSearch(this.value)" placeholder="ابحث باسم الصورة..." class="w-full pl-9 pr-10 py-2.5 rounded-xl bg-slate-100/90 dark:bg-[#1E293B] border border-transparent focus:border-[#0D9488] dark:focus:border-[#2DD4BF] focus:bg-white dark:focus:bg-[#0B1120] text-sm outline-none transition-all">
+                            <svg class="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                            <button id="clearSearchBtn" onclick="clearSearch()" class="hidden absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                            </button>
+                        </div>
+
+                        <!-- قائمة الفرز -->
+                        <select id="sortSelect" onchange="handleSort(this.value)" aria-label="ترتيب الصور" class="py-2.5 px-3 rounded-xl bg-slate-100/90 dark:bg-[#1E293B] border border-transparent focus:border-[#0D9488] dark:focus:border-[#2DD4BF] text-sm font-medium outline-none cursor-pointer">
+                            <option value="newest">الأحدث أولاً</option>
+                            <option value="oldest">الأقدم أولاً</option>
+                            <option value="name_asc">الاسم (أ - ي)</option>
+                            <option value="name_desc">الاسم (ي - أ)</option>
+                        </select>
+                    </div>
+                </div>
+            </header>
+
+            <!-- منطقة عرض المحتوى المتغير حسب القسم -->
+            <div id="mainContentArea" class="flex-1 p-4 sm:p-8 max-w-7xl w-full mx-auto">
+                <!-- سيتم حقن المحتوى ديناميكياً عبر JavaScript -->
+            </div>
+        </main>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- النوافذ المنبثقة (Modals) -->
+    <!-- ===================================================================== -->
+
+    <!-- 1. نافذة إضافة / رفع صور جديدة -->
+    <div id="uploadModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+        <div class="bg-white dark:bg-[#1E293B] rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-slate-200 dark:border-slate-700 animate-scale-up">
+            <div class="flex items-center justify-between mb-5">
+                <h3 class="text-xl font-bold flex items-center gap-2">
+                    <span class="p-2 rounded-xl bg-teal-100 dark:bg-teal-900/50 text-[#0D9488] dark:text-[#2DD4BF]">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                    </span>
+                    إضافة صور جديدة
+                </h3>
+                <button onclick="closeModal('uploadModal')" class="p-2 rounded-xl text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <!-- اختيار الألبوم الوجهة -->
+            <div class="mb-4">
+                <label class="block text-sm font-semibold mb-1.5 text-slate-700 dark:text-slate-300">حفظ في ألبوم (اختياري):</label>
+                <select id="uploadAlbumSelect" class="w-full p-3 rounded-xl bg-slate-100 dark:bg-[#0B1120] border border-slate-200 dark:border-slate-700 text-sm outline-none focus:border-[#0D9488]">
+                    <option value="">بدون ألبوم (كل الصور فقط)</option>
+                </select>
+            </div>
+
+            <!-- منطقة اختيار الملفات -->
+            <label for="fileInput" class="border-2 border-dashed border-slate-300 dark:border-slate-600 hover:border-[#0D9488] dark:hover:border-[#2DD4BF] rounded-2xl p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-colors bg-slate-50/70 dark:bg-[#0B1120]/40 group">
+                <div class="w-14 h-14 rounded-2xl bg-teal-50 dark:bg-teal-900/30 text-[#0D9488] dark:text-[#2DD4BF] flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                </div>
+                <span class="font-bold text-slate-800 dark:text-slate-200 mb-1">اضغط لاختيار الصور من جهازك</span>
+                <span class="text-xs text-slate-500 dark:text-slate-400">يدعم اختيار صور متعددة (JPG, PNG, WEBP, GIF)</span>
+                <input type="file" id="fileInput" multiple accept="image/*" class="hidden" onchange="handleFilesSelected(this.files)">
+            </label>
+
+            <!-- شريط التقدم أثناء المعالجة -->
+            <div id="uploadProgressBox" class="hidden mt-4">
+                <div class="flex justify-between text-xs font-semibold mb-1">
+                    <span>جاري حفظ الصور في قاعدة البيانات...</span>
+                    <span id="uploadProgressText">0%</span>
+                </div>
+                <div class="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                    <div id="uploadProgressBar" class="h-full bg-[#0D9488] dark:bg-[#2DD4BF] transition-all duration-200" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. نافذة إنشاء أو إعادة تسمية ألبوم -->
+    <div id="albumModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+        <div class="bg-white dark:bg-[#1E293B] rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700 animate-scale-up">
+            <h3 id="albumModalTitle" class="text-xl font-bold mb-4">إنشاء ألبوم جديد</h3>
+            <input type="hidden" id="editAlbumId">
+            <div class="mb-5">
+                <label class="block text-sm font-semibold mb-1.5 text-slate-700 dark:text-slate-300">اسم الألبوم</label>
+                <input type="text" id="albumNameInput" placeholder="مثال: رحلة الصيف، ذكريات العائلة..." class="w-full p-3 rounded-xl bg-slate-100 dark:bg-[#0B1120] border border-slate-200 dark:border-slate-700 outline-none focus:border-[#0D9488]" onkeydown="if(event.key==='Enter') saveAlbum()">
+            </div>
+            <div class="flex items-center justify-end gap-2">
+                <button onclick="closeModal('albumModal')" class="px-4 py-2.5 rounded-xl font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">إلغاء</button>
+                <button onclick="saveAlbum()" class="px-5 py-2.5 rounded-xl font-bold bg-[#0D9488] hover:bg-[#0F766E] dark:bg-[#2DD4BF] dark:text-slate-950 text-white shadow-md shadow-teal-600/20">حفظ الألبوم</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. نافذة حذف ألبوم (مع خيارات التعامل مع الصور بداخله) -->
+    <div id="deleteAlbumModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+        <div class="bg-white dark:bg-[#1E293B] rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700 animate-scale-up">
+            <div class="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-900/30 text-rose-600 flex items-center justify-center mb-4">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+            </div>
+            <h3 class="text-xl font-bold mb-2">حذف الألبوم "<span id="deleteAlbumNameSpan"></span>"</h3>
+            <p class="text-sm text-slate-500 dark:text-slate-400 mb-5">ماذا تريد أن تفعل بالصور الموجودة داخل هذا الألبوم؟</p>
+            <input type="hidden" id="deleteAlbumTargetId">
+            <div class="space-y-2.5 mb-6">
+                <button onclick="confirmDeleteAlbum(false)" class="w-full p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-[#0D9488] text-right transition-all flex items-center justify-between">
+                    <div>
+                        <div class="font-bold text-sm">حذف الألبوم فقط</div>
+                        <div class="text-xs text-slate-500">ستبقى الصور محفوظة في قسم "كل الصور"</div>
+                    </div>
+                    <svg class="w-5 h-5 text-[#0D9488]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </button>
+            </div>
+
+            <!-- اختيار الألبوم الوجهة -->
+            <div class="mb-4">
+                <label class="block text-sm font-semibold mb-1.5 text-slate-700 dark:text-slate-300">حفظ في ألبوم (اختياري):</label>
+                <select id="uploadAlbumSelect" class="w-full p-3 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm outline-none focus:border-indigo-500">
+                    <option value="">بدون ألبوم (كل الصور فقط)</option>
+                </select>
+            </div>
+
+            <!-- منطقة اختيار الملفات -->
+            <label for="fileInput" class="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-indigo-500 dark:hover:border-indigo-400 rounded-2xl p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-colors bg-slate-50/50 dark:bg-slate-800/30 group">
+                <div class="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                </div>
+                <span class="font-bold text-slate-800 dark:text-slate-200 mb-1">اضغط لاختيار الصور من جهازك</span>
+                <span class="text-xs text-slate-500 dark:text-slate-400">يدعم اختيار صور متعددة (JPG, PNG, WEBP, GIF)</span>
+                <input type="file" id="fileInput" multiple accept="image/*" class="hidden" onchange="handleFilesSelected(this.files)">
+            </label>
+
+            <!-- شريط التقدم أثناء المعالجة -->
+            <div id="uploadProgressBox" class="hidden mt-4">
+                <div class="flex justify-between text-xs font-semibold mb-1">
+                    <span>جاري حفظ الصور في قاعدة البيانات...</span>
+                    <span id="uploadProgressText">0%</span>
+                </div>
+                <div class="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                    <div id="uploadProgressBar" class="h-full bg-indigo-600 transition-all duration-200" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. نافذة إنشاء أو إعادة تسمية ألبوم -->
+    <div id="albumModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 animate-scale-up">
+            <h3 id="albumModalTitle" class="text-xl font-bold mb-4">إنشاء ألبوم جديد</h3>
+            <input type="hidden" id="editAlbumId">
+            <div class="mb-5">
+                <label class="block text-sm font-semibold mb-1.5 text-slate-700 dark:text-slate-300">اسم الألبوم</label>
+                <input type="text" id="albumNameInput" placeholder="مثال: رحلة الصيف، ذكريات العائلة..." class="w-full p-3 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 outline-none focus:border-indigo-500" onkeydown="if(event.key==='Enter') saveAlbum()">
+            </div>
+            <div class="flex items-center justify-end gap-2">
+                <button onclick="closeModal('albumModal')" class="px-4 py-2.5 rounded-xl font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">إلغاء</button>
+                <button onclick="saveAlbum()" class="px-5 py-2.5 rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-600/20">حفظ الألبوم</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. نافذة حذف ألبوم (مع خيارات التعامل مع الصور بداخله) -->
+    <div id="deleteAlbumModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 animate-scale-up">
+            <div class="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-900/30 text-rose-600 flex items-center justify-center mb-4">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+            </div>
+            <h3 class="text-xl font-bold mb-2">حذف الألبوم "<span id="deleteAlbumNameSpan"></span>"</h3>
+            <p class="text-sm text-slate-500 dark:text-slate-400 mb-5">ماذا تريد أن تفعل بالصور الموجودة داخل هذا الألبوم؟</p>
+            <input type="hidden" id="deleteAlbumTargetId">
+            <div class="space-y-2.5 mb-6">
+                <button onclick="confirmDeleteAlbum(false)" class="w-full p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-indigo-500 text-right transition-all flex items-center justify-between">
+                    <div>
+                        <div class="font-bold text-sm">حذف الألبوم فقط</div>
+                        <div class="text-xs text-slate-500">ستبقى الصور محفوظة في قسم "كل الصور"</div>
+                    </div>
+                    <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </button>
+                <button onclick="confirmDeleteAlbum(true)" class="w-full p-3.5 rounded-2xl border border-rose-200 dark:border-rose-900/50 bg-rose-50/50 dark:bg-rose-950/20 hover:bg-rose-100/60 text-right transition-all flex items-center justify-between">
+                    <div>
+                        <div class="font-bold text-sm text-rose-600 dark:text-rose-400">حذف الألبوم ونقل صوره للمحذوفات</div>
+                        <div class="text-xs text-slate-500">سيتم نقل جميع صور الألبوم إلى سلة المحذوفات</div>
+                    </div>
+                    <svg class="w-5 h-5 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                </button>
+            </div>
+            <button onclick="closeModal('deleteAlbumModal')" class="w-full py-2.5 rounded-xl font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">إلغاء الأمر</button>
+        </div>
+    </div>
+
+    <!-- 4. نافذة تعديل اسم الصورة أو نقلها لألبوم آخر -->
+    <div id="editPhotoModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+        <div class="bg-white dark:bg-[#1E293B] rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700 animate-scale-up">
+            <h3 class="text-xl font-bold mb-4">تعديل تفاصيل الصورة</h3>
+            <input type="hidden" id="editPhotoId">
+            <div class="mb-4">
+                <label class="block text-sm font-semibold mb-1.5 text-slate-700 dark:text-slate-300">اسم الصورة</label>
+                <input type="text" id="editPhotoNameInput" class="w-full p-3 rounded-xl bg-slate-100 dark:bg-[#0B1120] border border-slate-200 dark:border-slate-700 outline-none focus:border-[#0D9488]" onkeydown="if(event.key==='Enter') savePhotoDetails()">
+            </div>
+            <div class="mb-6">
+                <label class="block text-sm font-semibold mb-1.5 text-slate-700 dark:text-slate-300">الألبوم</label>
+                <select id="editPhotoAlbumSelect" class="w-full p-3 rounded-xl bg-slate-100 dark:bg-[#0B1120] border border-slate-200 dark:border-slate-700 outline-none focus:border-[#0D9488]">
+                    <option value="">بدون ألبوم</option>
+                </select>
+            </div>
+            <div class="flex items-center justify-end gap-2">
+                <button onclick="closeModal('editPhotoModal')" class="px-4 py-2.5 rounded-xl font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">إلغاء</button>
+                <button onclick="savePhotoDetails()" class="px-5 py-2.5 rounded-xl font-bold bg-[#0D9488] hover:bg-[#0F766E] dark:bg-[#2DD4BF] dark:text-slate-950 text-white">حفظ التعديلات</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. عارض الصور كامل الشاشة (Lightbox Modal) مع التكبير والتنقل -->
+    <div id="lightboxModal" class="fixed inset-0 z-50 hidden flex-col bg-[#070B14]/95 backdrop-blur-md text-white select-none animate-fade-in">
+        
+        <!-- الشريط العلوي للعارض -->
+        <div class="flex items-center justify-between px-4 sm:px-6 py-3.5 bg-gradient-to-b from-black/70 to-transparent z-20">
+            <div class="flex items-center gap-3 min-w-0">
+                <button onclick="closeLightbox()" title="إغلاق (Esc)" class="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+                <div class="truncate">
+                    <h4 id="lbPhotoTitle" class="font-bold text-sm sm:text-base truncate">اسم الصورة</h4>
+                    <p id="lbPhotoMeta" class="text-xs text-slate-400">التاريخ والحجم</p>
+                </div>
+            </div>
+
+            <!-- أزرار التحكم بالصورة داخل العارض -->
+            <div class="flex items-center gap-1.5 sm:gap-2">
+                <!-- أدوات التكبير والتصغير -->
+                <div class="hidden sm:flex items-center bg-white/10 rounded-xl p-1 mr-2">
+                    <button onclick="zoomLightbox(-0.25)" title="تصغير (-)" class="p-1.5 rounded-lg hover:bg-white/15 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7"></path></svg>
+                    </button>
+                    <span id="zoomLevelText" class="text-xs font-mono px-2 min-w-[3.2rem] text-center">100%</span>
+                    <button onclick="zoomLightbox(0.25)" title="تكبير (+)" class="p-1.5 rounded-lg hover:bg-white/15 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path></svg>
+                    </button>
+                    <button onclick="resetZoom()" title="إعادة ضبط الحجم" class="p-1.5 rounded-lg hover:bg-white/15 transition-colors text-xs px-2">
+                        إعادة
+                    </button>
+                </div>
+
+                <!-- تفضيل -->
+                <button id="lbFavBtn" onclick="toggleCurrentLightboxFav()" title="المفضلة" class="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+                </button>
+
+                <!-- تعديل الاسم / الألبوم -->
+                <button onclick="editCurrentLightboxPhoto()" title="تعديل الاسم أو الألبوم" class="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                </button>
+
+                <!-- تحميل الصورة -->
+                <button onclick="downloadCurrentLightboxPhoto()" title="تحميل الصورة على الجهاز" class="p-2.5 rounded-xl bg-[#0D9488] hover:bg-[#0F766E] transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                </button>
+
+                <!-- حذف الصورة -->
+                <button onclick="deleteCurrentLightboxPhoto()" title="نقل إلى سلة المحذوفات" class="p-2.5 rounded-xl bg-rose-500/20 text-rose-400 hover:bg-rose-600 hover:text-white transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- منطقة عرض الصورة الوسطى -->
+        <div id="lbImageContainer" class="flex-1 relative flex items-center justify-center overflow-hidden cursor-grab active:cursor-grabbing">
+            <!-- زر الصورة السابقة (في RTL السهم لليمين يعود للسابق) -->
+            <button id="lbPrevBtn" onclick="navigateLightbox(-1)" title="الصورة السابقة" class="absolute right-3 sm:right-6 z-20 p-3 sm:p-4 rounded-full bg-white/10 hover:bg-white/25 backdrop-blur-md transition-all active:scale-90">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
+            </button>
+
+            <!-- الصورة المعروضة -->
+            <img id="lbImage" src="" alt="معاينة الصورة" draggable="false" class="max-h-[82vh] max-w-[88vw] object-contain rounded-lg shadow-2xl transition-transform duration-150 ease-out">
+
+            <!-- زر الصورة التالية (في RTL السهم لليسار ينتقل للتالي) -->
+            <button id="lbNextBtn" onclick="navigateLightbox(1)" title="الصورة التالية" class="absolute left-3 sm:left-6 z-20 p-3 sm:p-4 rounded-full bg-white/10 hover:bg-white/25 backdrop-blur-md transition-all active:scale-90">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path></svg>
+            </button>
+        </div>
+
+        <!-- شريط سفلي للموبايل للتكبير ومؤشر العدد -->
+        <div class="px-6 py-3 bg-gradient-to-t from-black/70 to-transparent flex items-center justify-between sm:justify-center gap-4 z-20">
+            <span id="lbCounter" class="text-xs font-semibold bg-white/10 px-3 py-1 rounded-full">1 / 1</span>
+            <div class="flex sm:hidden items-center bg-white/10 rounded-xl p-1">
+                <button onclick="zoomLightbox(-0.25)" class="p-1.5 rounded-lg"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg></button>
+                <span id="zoomLevelTextMobile" class="text-xs px-2">100%</span>
+                <button onclick="zoomLightbox(0.25)" class="p-1.5 rounded-lg"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- حاوية الإشعارات المنبثقة (Toast Notifications) -->
+    <div id="toastContainer" class="fixed bottom-5 left-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- ===================================================================== -->
+    <!-- الكود البرمجي الكامل للتطبيق (JavaScript + IndexedDB) -->
+    <!-- ===================================================================== -->
+    <script>
+        /**
+         * 1. إعداد وإدارة قاعدة البيانات المحلية IndexedDB
+         * لحفظ الصور كـ Blob عالي الجودة والألبومات بشكل دائم في المتصفح
+         */
+        const DB_NAME = 'MySmartPhotoGalleryDB';
+        const DB_VERSION = 1;
+        let db = null;
+
+        function initDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+                request.onupgradeneeded = (event) => {
+                    const database = event.target.result;
+                    // مخزن الصور
+                    if (!database.objectStoreNames.contains('photos')) {
+                        const photoStore = database.createObjectStore('photos', { keyPath: 'id' });
+                        photoStore.createIndex('albumId', 'albumId', { unique: false });
+                        photoStore.createIndex('createdAt', 'createdAt', { unique: false });
+                    }
+                    // مخزن الألبومات
+                    if (!database.objectStoreNames.contains('albums')) {
+                        database.createObjectStore('albums', { keyPath: 'id' });
+                    }
+                };
+
+                request.onsuccess = (event) => {
+                    db = event.target.result;
+                    resolve(db);
+                };
+
+                request.onerror = (event) => {
+                    console.error('فشل فتح قاعدة البيانات:', event.target.error);
+                    reject(event.target.error);
+                };
+            });
+        }
+
+        // دوال مساعدة للتعامل مع IndexedDB
+        const dbOps = {
+            getAll(storeName) {
+                return new Promise((resolve, reject) => {
+                    const tx = db.transaction(storeName, 'readonly');
+                    const store = tx.objectStore(storeName);
+                    const req = store.getAll();
+                    req.onsuccess = () => resolve(req.result);
+                    req.onerror = () => reject(req.error);
+                });
+            },
+            put(storeName, item) {
+                return new Promise((resolve, reject) => {
+                    const tx = db.transaction(storeName, 'readwrite');
+                    const store = tx.objectStore(storeName);
+                    const req = store.put(item);
+                    req.onsuccess = () => resolve(req.result);
+                    req.onerror = () => reject(req.error);
+                });
+            },
+            delete(storeName, id) {
+                return new Promise((resolve, reject) => {
+                    const tx = db.transaction(storeName, 'readwrite');
+                    const store = tx.objectStore(storeName);
+                    const req = store.delete(id);
+                    req.onsuccess = () => resolve();
+                    req.onerror = () => reject(req.error);
+                });
+            }
+        };
+
+        /**
+         * 2. حالة التطبيق العامة (Application State)
+         */
+        let state = {
+            photos: [],          // جميع الصور المحملة من قاعدة البيانات
+            albums: [],          // جميع الألبومات
+            objectUrls: {},      // خريطة لتخزين روابط الصور المؤقتة URL.createObjectURL لتحسين الأداء
+            currentView: 'home', // home | all | favorites | albums | album-detail | trash
+            selectedAlbumId: null,
+            searchQuery: '',
+            sortBy: 'newest',
+            // حالة عارض الصور (Lightbox)
+            lightbox: {
+                isOpen: false,
+                currentList: [],
+                currentIndex: 0,
+                zoom: 1,
+                panX: 0,
+                panY: 0,
+                isDragging: false,
+                startX: 0,
+                startY: 0
+            }
+        };
+
+        /**
+         * 3. تهيئة التطبيق عند التحميل
+         */
+        window.addEventListener('DOMContentLoaded', async () => {
+            initTheme();
+            setupGlobalDragAndDrop();
+            setupLightboxGestures();
+
+            try {
+                await initDB();
+                await loadDataFromDB();
+                renderApp();
+            } catch (err) {
+                showToast('حدث خطأ أثناء تهيئة قاعدة البيانات المحلية', 'error');
+            }
+        });
+
+        // تحميل البيانات من IndexedDB وتوليد روابط العرض
+        async function loadDataFromDB() {
+            state.photos = await dbOps.getAll('photos');
+            state.albums = await dbOps.getAll('albums');
+
+            // توليد Object URLs للصور الجديدة فقط لتوفير الذاكرة وسرعة العرض
+            state.photos.forEach(photo => {
+                if (!state.objectUrls[photo.id] && photo.blob) {
+                    state.objectUrls[photo.id] = URL.createObjectURL(photo.blob);
+                }
+            });
+
+            updateSidebarCounts();
+            updateStorageEstimate();
+        }
+
+        /**
+         * 4. التنقل وعرض الأقسام (Navigation & Rendering)
+         */
+        function navigate(view, albumId = null) {
+            state.currentView = view;
+            state.selectedAlbumId = albumId;
+
+            // إغلاق القائمة الجانبية تلقائياً في الموبايل عند الاختيار
+            const sidebar = document.getElementById('sidebar');
+            if (!sidebar.classList.contains('translate-x-full') && window.innerWidth < 1024) {
+                toggleSidebar();
+            }
+
+            renderApp();
+        }
+
+        function renderApp() {
+            updateActiveNavStyles();
+            const container = document.getElementById('mainContentArea');
+            const titleEl = document.getElementById('pageTitle');
+            const subtitleEl = document.getElementById('pageSubtitle');
+
+            // تحديث العناوين والمحتوى حسب القسم النشط
+            if (state.currentView === 'home') {
+                titleEl.textContent = 'الرئيسية';
+                subtitleEl.textContent = 'نظرة عامة على معرض صورك وأحدث الإضافات';
+                renderHomeView(container);
+            } else if (state.currentView === 'all') {
+                const photos = getFilteredPhotos(p => !p.isDeleted);
+                titleEl.textContent = 'كل الصور';
+                subtitleEl.textContent = `إجمالي الصور المعروضة: ${photos.length} صورة`;
+                renderGalleryView(container, photos, 'لا توجد صور في معرضك بعد. اضغط على "إضافة صور جديدة" للبدء!');
+            } else if (state.currentView === 'favorites') {
+                const photos = getFilteredPhotos(p => !p.isDeleted && p.isFavorite);
+                titleEl.textContent = 'المفضلة';
+                subtitleEl.textContent = `صورك المميزة والمفضلة (${photos.length})`;
+                renderGalleryView(container, photos, 'لم تقم بإضافة أي صورة إلى المفضلة بعد. اضغط على أيقونة القلب على أي صورة لتفضيلها.');
+            } else if (state.currentView === 'albums') {
+                titleEl.textContent = 'الألبومات';
+                subtitleEl.textContent = `نظم صورك في مجموعات مخصصة (${state.albums.length} ألبوم)`;
+                renderAlbumsView(container);
+            } else if (state.currentView === 'album-detail') {
+                const album = state.albums.find(a => a.id === state.selectedAlbumId);
+                if (!album) return navigate('albums');
+                const photos = getFilteredPhotos(p => !p.isDeleted && p.albumId === album.id);
+                titleEl.textContent = album.name;
+                subtitleEl.textContent = `يحتوي هذا الألبوم على ${photos.length} صورة`;
+                renderAlbumDetailView(container, album, photos);
+            } else if (state.currentView === 'trash') {
+                const photos = getFilteredPhotos(p => p.isDeleted);
+                titleEl.textContent = 'سلة المحذوفات';
+                subtitleEl.textContent = `يمكنك استعادة الصور المحذوفة أو حذفها نهائياً (${photos.length})`;
+                renderTrashView(container, photos);
+            }
+        }
+
+        // تحديث تمييز الزر النشط في القائمة الجانبية
+        function updateActiveNavStyles() {
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                const isMatch = btn.dataset.nav === state.currentView ||
+                                (state.currentView === 'album-detail' && btn.dataset.nav === 'albums');
+                if (isMatch) {
+                    btn.className = 'nav-btn w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-bold bg-teal-50 dark:bg-teal-950/60 text-[#0D9488] dark:text-[#2DD4BF] transition-all';
+                } else {
+                    btn.className = 'nav-btn w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-[#1E293B]/70 transition-all';
+                }
+            });
+
+            // تحديث قائمة الألبومات الجانبية
+            const sidebarAlbums = document.getElementById('sidebarAlbumsList');
+            if (state.albums.length === 0) {
+                sidebarAlbums.innerHTML = `<p class="text-xs text-slate-400 px-4 py-2">لا توجد ألبومات بعد</p>`;
+            } else {
+                sidebarAlbums.innerHTML = state.albums.map(album => {
+                    const count = state.photos.filter(p => !p.isDeleted && p.albumId === album.id).length;
+                    const isActive = state.currentView === 'album-detail' && state.selectedAlbumId === album.id;
+                    return `
+                        <button onclick="navigate('album-detail', '${album.id}')" class="w-full flex items-center justify-between px-4 py-2 rounded-xl text-xs font-semibold transition-colors ${isActive ? 'bg-[#0D9488] dark:bg-[#2DD4BF] text-white dark:text-slate-950 font-bold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-[#1E293B]'}">
+                            <span class="truncate flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full ${isActive ? 'bg-white dark:bg-slate-950' : 'bg-[#0D9488] dark:bg-[#2DD4BF]'}"></span>
+                                ${escapeHTML(album.name)}
+                            </span>
+                            <span class="opacity-75">${count}</span>
+                        </button>
+                    `;
+                }).join('');
+            }
+        }
+        // أ) الواجهة الرئيسية (Dashboard + أحدث الصور أو شاشة الترحيب النظيفة)
+        function renderHomeView(container) {
+            const activePhotos = state.photos.filter(p => !p.isDeleted);
+            const favCount = activePhotos.filter(p => p.isFavorite).length;
+            const recentPhotos = getFilteredPhotos(p => !p.isDeleted).slice(0, 8);
+
+            // عرض شاشة ترحيبية أنيقة عندما يكون التطبيق فارغاً تماماً لأول مرة
+            if (activePhotos.length === 0 && state.albums.length === 0) {
+                container.innerHTML = `
+                    <div class="bg-white dark:bg-[#131C31] rounded-3xl border border-slate-200/80 dark:border-slate-800 p-8 sm:p-14 text-center shadow-xs max-w-3xl mx-auto my-6 animate-scale-up">
+                        <div class="w-20 h-20 mx-auto mb-6 rounded-3xl bg-gradient-to-tr from-[#0F766E] to-[#14B8A6] text-white flex items-center justify-center shadow-xl shadow-teal-600/25">
+                            <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                        </div>
+                        <h3 class="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white mb-3">أهلاً بك في معرض صورك الخاص</h3>
+                        <p class="text-sm sm:text-base text-slate-500 dark:text-slate-400 max-w-lg mx-auto mb-8 leading-relaxed">
+                            معرضك نظيف وجاهز الآن! ابدأ بإضافة صورك المفضلة من جهازك أو نظّم ذكرياتك في ألبومات مخصصة، وسيتم حفظها بأمان داخل متصفحك.
+                        </p>
+                        <div class="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
+                            <button onclick="openUploadModal()" class="px-6 py-3.5 rounded-2xl bg-[#0D9488] hover:bg-[#0F766E] dark:bg-[#2DD4BF] dark:hover:bg-teal-300 text-white dark:text-slate-950 font-bold text-sm sm:text-base shadow-lg shadow-teal-600/25 flex items-center gap-2 transition-all">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                                <span>إضافة صورك الأولى</span>
+                            </button>
+                            <button onclick="openCreateAlbumModal()" class="px-6 py-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 hover:bg-amber-100/70 font-bold text-sm sm:text-base flex items-center gap-2 transition-all">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                                <span>إنشاء ألبوم جديد</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = `
+                <!-- بطاقات الإحصائيات السريعة -->
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                    <div onclick="navigate('all')" class="cursor-pointer bg-white dark:bg-[#131C31] p-5 rounded-3xl border border-slate-200/70 dark:border-slate-800 hover:border-[#0D9488] dark:hover:border-[#2DD4BF] transition-all shadow-xs group">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="p-3 rounded-2xl bg-teal-50 dark:bg-teal-950 text-[#0D9488] dark:text-[#2DD4BF] group-hover:scale-110 transition-transform">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                            </span>
+                            <span class="text-2xl sm:text-3xl font-extrabold">${activePhotos.length}</span>
+                        </div>
+                        <p class="text-sm font-bold text-slate-600 dark:text-slate-300">إجمالي الصور</p>
+                    </div>
+
+                    <div onclick="navigate('albums')" class="cursor-pointer bg-white dark:bg-[#131C31] p-5 rounded-3xl border border-slate-200/70 dark:border-slate-800 hover:border-amber-500 transition-all shadow-xs group">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950 text-amber-600 dark:text-amber-400 group-hover:scale-110 transition-transform">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                            </span>
+                            <span class="text-2xl sm:text-3xl font-extrabold">${state.albums.length}</span>
+                        </div>
+                        <p class="text-sm font-bold text-slate-600 dark:text-slate-300">الألبومات المنشأة</p>
+                    </div>
+
+                    <div onclick="navigate('favorites')" class="cursor-pointer bg-white dark:bg-[#131C31] p-5 rounded-3xl border border-slate-200/70 dark:border-slate-800 hover:border-rose-500 transition-all shadow-xs group">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950 text-rose-600 dark:text-rose-400 group-hover:scale-110 transition-transform">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+                            </span>
+                            <span class="text-2xl sm:text-3xl font-extrabold">${favCount}</span>
+                        </div>
+                        <p class="text-sm font-bold text-slate-600 dark:text-slate-300">الصور المفضلة</p>
+                    </div>
+
+                    <div onclick="openUploadModal()" class="cursor-pointer bg-gradient-to-br from-[#0F766E] to-[#14B8A6] p-5 rounded-3xl text-white shadow-lg shadow-teal-600/20 hover:opacity-95 transition-all flex flex-col justify-between">
+                        <div class="flex items-center justify-between">
+                            <span class="p-2.5 rounded-2xl bg-white/20">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                            </span>
+                            <span class="text-xs bg-amber-400/25 border border-amber-200/30 px-2.5 py-1 rounded-full font-semibold">سريع</span>
+                        </div>
+                        <div class="mt-3">
+                            <p class="font-extrabold text-base">رفع صور جديدة</p>
+                            <p class="text-xs text-teal-50">أو اسحب الصور وأفلتها هنا</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- قسم أحدث الصور المضافة -->
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-extrabold">أحدث الصور في معرضك</h3>
+                    ${activePhotos.length > 0 ? `<button onclick="navigate('all')" class="text-sm font-bold text-[#0D9488] dark:text-[#2DD4BF] hover:underline">عرض الكل &larr;</button>` : ''}
+                </div>
+                <div id="homeRecentGrid"></div>
+            `;
+
+            const gridTarget = document.getElementById('homeRecentGrid');
+            renderPhotoGrid(gridTarget, recentPhotos, 'لا توجد صور حالياً. ابدأ بإضافة صورك المفضلة من جهازك!');
+        }
+
+        // ب) عرض شبكة الصور (Gallery View)
+        function renderGalleryView(container, photos, emptyMsg) {
+            container.innerHTML = `<div id="galleryGridContainer"></div>`;
+            renderPhotoGrid(document.getElementById('galleryGridContainer'), photos, emptyMsg);
+        }
+
+        // دالة توليد بطاقات الصور في الشبكة (Reusable Photo Grid)
+        function renderPhotoGrid(targetEl, photosList, emptyMessage) {
+            if (!photosList || photosList.length === 0) {
+                targetEl.innerHTML = `
+                    <div class="bg-white dark:bg-[#131C31] rounded-3xl border border-dashed border-slate-300 dark:border-slate-700 p-12 text-center my-4">
+                        <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-teal-50 dark:bg-teal-950/60 text-[#0D9488] dark:text-[#2DD4BF] flex items-center justify-center">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                        </div>
+                        <p class="text-slate-600 dark:text-slate-300 font-bold mb-3">${emptyMessage}</p>
+                        <button onclick="openUploadModal()" class="mt-2 px-5 py-2.5 rounded-xl bg-[#0D9488] hover:bg-[#0F766E] dark:bg-[#2DD4BF] dark:text-slate-950 text-white text-sm font-bold shadow-md shadow-teal-600/20">إضافة صور الآن</button>
+                    </div>
+                `;
+                return;
+            }
+
+            // حفظ القائمة الحالية للعارض حتى يتمكن المستخدم من التنقل بين الصور المعروضة فقط
+            window.currentRenderedPhotos = photosList;
+
+            targetEl.innerHTML = `
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4">
+                    ${photosList.map((photo, index) => {
+                        const url = state.objectUrls[photo.id] || '';
+                        const album = state.albums.find(a => a.id === photo.albumId);
+                        const dateStr = new Date(photo.createdAt).toLocaleDateString('ar-EG', { day: 'numeric', month: 'short', year: 'numeric' });
+
+                        return `
+                            <div class="group relative bg-white dark:bg-[#131C31] rounded-2xl overflow-hidden border border-slate-200/80 dark:border-slate-800 shadow-xs hover:shadow-xl hover:border-teal-500/40 hover:-translate-y-1 transition-all duration-300 animate-fade-in">
+                                <!-- صورة مصغرة قابلة للضغط لفتح العارض -->
+                                <div onclick="openLightbox(${index})" class="aspect-square w-full overflow-hidden bg-slate-100 dark:bg-[#1E293B] cursor-pointer relative">
+                                    <img src="${url}" alt="${escapeHTML(photo.name)}" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                                    <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+                                </div>
+
+                                <!-- زر التفضيل السريع أعلى اليسار -->
+                                <button onclick="event.stopPropagation(); toggleFavorite('${photo.id}')" title="${photo.isFavorite ? 'إزالة من المفضلة' : 'إضافة للمفضلة'}" class="absolute top-2.5 left-2.5 p-2 rounded-xl backdrop-blur-md transition-all ${photo.isFavorite ? 'bg-rose-500 text-white shadow-md' : 'bg-black/35 text-white hover:bg-black/60 opacity-90 sm:opacity-0 group-hover:opacity-100'}">
+                                    <svg class="w-4 h-4 ${photo.isFavorite ? 'fill-current' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+                                </button>
+
+                                <!-- شارة اسم الألبوم إن وجد -->
+                                ${album ? `<span class="absolute top-2.5 right-2.5 text-[10px] font-bold px-2.5 py-1 rounded-lg bg-[#0F766E]/85 text-white backdrop-blur-md max-w-[65%] truncate">${escapeHTML(album.name)}</span>` : ''}
+
+                                <!-- معلومات الصورة وأزرار الإجراءات السريعة -->
+                                <div class="p-3 flex items-center justify-between gap-2">
+                                    <div class="min-w-0 flex-1 cursor-pointer" onclick="openLightbox(${index})">
+                                        <h4 class="text-xs sm:text-sm font-bold truncate text-slate-800 dark:text-slate-100">${escapeHTML(photo.name)}</h4>
+                                        <p class="text-[11px] text-slate-400 mt-0.5">${dateStr}</p>
+                                    </div>
+                                    <div class="flex items-center gap-1">
+                                        <button onclick="openEditPhotoModal('${photo.id}')" title="تعديل الاسم أو الألبوم" class="p-1.5 rounded-lg text-slate-400 hover:text-[#0D9488] dark:hover:text-[#2DD4BF] hover:bg-teal-50 dark:hover:bg-teal-950 transition-colors">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                                        </button>
+                                        <button onclick="moveToTrash('${photo.id}')" title="نقل إلى سلة المحذوفات" class="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950 transition-colors">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+        }
+
+        // ج) عرض صفحة جميع الألبومات
+        function renderAlbumsView(container) {
+            container.innerHTML = `
+                <div class="mb-6 flex justify-end">
+                    <button onclick="openCreateAlbumModal()" class="px-5 py-2.5 rounded-xl bg-[#0D9488] hover:bg-[#0F766E] dark:bg-[#2DD4BF] dark:text-slate-950 text-white font-bold text-sm shadow-md shadow-teal-600/20 flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        <span>إنشاء ألبوم جديد</span>
+                    </button>
+                </div>
+
+                ${state.albums.length === 0 ? `
+                    <div class="bg-white dark:bg-[#131C31] rounded-3xl border border-dashed border-slate-300 dark:border-slate-700 p-12 text-center">
+                        <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-amber-50 dark:bg-amber-950/50 text-amber-500 flex items-center justify-center">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                        </div>
+                        <p class="font-bold text-slate-600 dark:text-slate-300 mb-3">لم تقم بإنشاء أي ألبومات حتى الآن</p>
+                        <button onclick="openCreateAlbumModal()" class="px-5 py-2.5 rounded-xl bg-[#0D9488] dark:bg-[#2DD4BF] dark:text-slate-950 text-white text-sm font-bold">إنشاء أول ألبوم</button>
+                    </div>
+                ` : `
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+                        ${state.albums.map(album => {
+                            const albumPhotos = state.photos.filter(p => !p.isDeleted && p.albumId === album.id);
+                            const coverPhoto = albumPhotos[0];
+                            const coverUrl = coverPhoto ? state.objectUrls[coverPhoto.id] : null;
+
+                            return `
+                                <div class="bg-white dark:bg-[#131C31] rounded-3xl overflow-hidden border border-slate-200/80 dark:border-slate-800 shadow-xs hover:shadow-xl hover:border-teal-500/40 transition-all group">
+                                    <div onclick="navigate('album-detail', '${album.id}')" class="aspect-video w-full bg-slate-100 dark:bg-[#1E293B] relative overflow-hidden cursor-pointer">
+                                        ${coverUrl
+                                            ? `<img src="${coverUrl}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">`
+                                            : `<div class="w-full h-full flex items-center justify-center text-slate-400"><svg class="w-12 h-12 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg></div>`
+                                        }
+                                        <span class="absolute bottom-3 right-3 px-3 py-1 rounded-full text-xs font-bold bg-black/60 text-white backdrop-blur-md">
+                                            ${albumPhotos.length} صورة
+                                        </span>
+                                    </div>
+                                    <div class="p-4 flex items-center justify-between">
+                                        <div onclick="navigate('album-detail', '${album.id}')" class="cursor-pointer min-w-0 flex-1">
+                                            <h4 class="font-extrabold text-base truncate group-hover:text-[#0D9488] dark:group-hover:text-[#2DD4BF] transition-colors">${escapeHTML(album.name)}</h4>
+                                            <p class="text-xs text-slate-400 mt-0.5">${new Date(album.createdAt).toLocaleDateString('ar-EG')}</p>
+                                        </div>
+                                        <div class="flex items-center gap-1">
+                                            <button onclick="openRenameAlbumModal('${album.id}')" title="إعادة تسمية الألبوم" class="p-2 rounded-xl text-slate-400 hover:text-[#0D9488] dark:hover:text-[#2DD4BF] hover:bg-teal-50 dark:hover:bg-teal-950">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                                            </button>
+                                            <button onclick="openDeleteAlbumModal('${album.id}')" title="حذف الألبوم" class="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `}
+            `;
+        }
+
+        // د) عرض تفاصيل ألبوم محدد
+        function renderAlbumDetailView(container, album, photos) {
+            container.innerHTML = `
+                <div class="bg-white dark:bg-[#131C31] p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 mb-6 flex flex-wrap items-center justify-between gap-3">
+                    <button onclick="navigate('albums')" class="text-sm font-bold text-slate-600 dark:text-slate-300 hover:text-[#0D9488] dark:hover:text-[#2DD4BF] flex items-center gap-1.5">
+                        <span>&rarr;</span> العودة للألبومات
+                    </button>
+                    <div class="flex items-center gap-2">
+                        <button onclick="openUploadModal('${album.id}')" class="px-4 py-2 rounded-xl bg-[#0D9488] hover:bg-[#0F766E] dark:bg-[#2DD4BF] dark:text-slate-950 text-white text-xs sm:text-sm font-bold">
+                            + إضافة صور للألبوم
+                        </button>
+                        <button onclick="openRenameAlbumModal('${album.id}')" class="px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-[#1E293B] hover:bg-slate-200 text-xs sm:text-sm font-semibold">
+                            إعادة تسمية
+                        </button>
+                        <button onclick="openDeleteAlbumModal('${album.id}')" class="px-3.5 py-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 hover:bg-rose-100 text-xs sm:text-sm font-semibold">
+                            حذف الألبوم
+                        </button>
+                    </div>
+                </div>
+                <div id="albumPhotosGrid"></div>
+            `;
+            renderPhotoGrid(document.getElementById('albumPhotosGrid'), photos, 'هذا الألبوم فارغ حالياً. يمكنك إضافة صور جديدة إليه أو نقل صور موجودة.');
+        }
+
+        // هـ) عرض سلة المحذوفات
+        function renderTrashView(container, photos) {
+            container.innerHTML = `
+                ${photos.length > 0 ? `
+                    <div class="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-2xl p-4 mb-6 flex flex-wrap items-center justify-between gap-3">
+                        <p class="text-xs sm:text-sm text-amber-800 dark:text-amber-300 font-medium">الصور الموجودة في سلة المحذوفات لا تظهر في الألبومات حتى تقوم باستعادتها.</p>
+                        <button onclick="emptyTrash()" class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs sm:text-sm font-bold shadow-xs">
+                            إفراغ السلة نهائياً
+                        </button>
+                    </div>
+                ` : ''}
+
+                ${photos.length === 0 ? `
+                    <div class="bg-white dark:bg-[#131C31] rounded-3xl border border-dashed border-slate-300 dark:border-slate-700 p-12 text-center">
+                        <p class="font-bold text-slate-500">سلة المحذوفات فارغة تماماً</p>
+                    </div>
+                ` : `
+                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4">
+                        ${photos.map(photo => `
+                            <div class="bg-white dark:bg-[#131C31] rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 opacity-85 hover:opacity-100 transition-opacity">
+                                <div class="aspect-square bg-slate-100 dark:bg-[#1E293B] relative">
+                                    <img src="${state.objectUrls[photo.id]}" class="w-full h-full object-cover grayscale-25">
+                                </div>
+                                <div class="p-3">
+                                    <p class="text-xs font-bold truncate mb-2">${escapeHTML(photo.name)}</p>
+                                    <div class="flex items-center gap-1.5">
+                                        <button onclick="restoreFromTrash('${photo.id}')" class="flex-1 py-1.5 px-2 rounded-lg bg-teal-50 dark:bg-teal-950/50 text-[#0D9488] dark:text-[#2DD4BF] hover:bg-teal-100 text-xs font-bold">
+                                            استعادة
+                                        </button>
+                                        <button onclick="permanentlyDeletePhoto('${photo.id}')" class="py-1.5 px-2.5 rounded-lg bg-rose-50 dark:bg-rose-950/50 text-rose-600 hover:bg-rose-100 text-xs font-bold" title="حذف نهائي">
+                                            حذف
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `}
+            `;
+        }
+
+        /**
+         * 6. الفلترة والبحث والفرز
+         */
+        function getFilteredPhotos(predicate) {
+            let list = state.photos.filter(predicate);
+
+            // تطبيق البحث بالاسم
+            if (state.searchQuery.trim() !== '') {
+                const q = state.searchQuery.trim().toLowerCase();
+                list = list.filter(p => p.name.toLowerCase().includes(q));
+            }
+
+            // تطبيق الترتيب
+            list.sort((a, b) => {
+                if (state.sortBy === 'newest') return b.createdAt - a.createdAt;
+                if (state.sortBy === 'oldest') return a.createdAt - b.createdAt;
+                if (state.sortBy === 'name_asc') return a.name.localeCompare(b.name, 'ar');
+                if (state.sortBy === 'name_desc') return b.name.localeCompare(a.name, 'ar');
+                return 0;
+            });
+
+            return list;
+        }
+
+        function handleSearch(val) {
+            state.searchQuery = val;
+            document.getElementById('clearSearchBtn').classList.toggle('hidden', val.length === 0);
+            renderApp();
+        }
+
+        function clearSearch() {
+            document.getElementById('searchInput').value = '';
+            handleSearch('');
+        }
+
+        function handleSort(val) {
+            state.sortBy = val;
+            renderApp();
+        }
+
+        /**
+         * 7. رفع الصور ومعالجتها (Upload & Drag-and-Drop)
+         */
+        function openUploadModal(preselectedAlbumId = null) {
+            const select = document.getElementById('uploadAlbumSelect');
+            select.innerHTML = `<option value="">بدون ألبوم (كل الصور فقط)</option>` +
+                state.albums.map(a => `<option value="${a.id}">${escapeHTML(a.name)}</option>`).join('');
+
+            if (preselectedAlbumId) {
+                select.value = preselectedAlbumId;
+            } else if (state.currentView === 'album-detail' && state.selectedAlbumId) {
+                select.value = state.selectedAlbumId;
+            }
+
+            document.getElementById('fileInput').value = '';
+            document.getElementById('uploadProgressBox').classList.add('hidden');
+            openModal('uploadModal');
+        }
+
+        async function handleFilesSelected(files) {
+            if (!files || files.length === 0) return;
+
+            const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+            if (imageFiles.length === 0) {
+                showToast('يرجى اختيار ملفات صور صالحة فقط', 'error');
+                return;
+            }
+
+            const albumId = document.getElementById('uploadAlbumSelect').value || null;
+            const progressBox = document.getElementById('uploadProgressBox');
+            const progressBar = document.getElementById('uploadProgressBar');
+            const progressText = document.getElementById('uploadProgressText');
+
+            progressBox.classList.remove('hidden');
+
+            for (let i = 0; i < imageFiles.length; i++) {
+                const file = imageFiles[i];
+                // إزالة الامتداد من اسم الملف ليكون الاسم نظيفاً
+                const cleanName = file.name.replace(/\.[^/.]+$/, "");
+                const photoObj = {
+                    id: 'photo_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+                    name: cleanName || 'صورة جديدة',
+                    blob: file, // تخزين الملف مباشرة كـ Blob في IndexedDB
+                    size: file.size,
+                    type: file.type,
+                    albumId: albumId,
+                    isFavorite: false,
+                    isDeleted: false,
+                    createdAt: Date.now() + i
+                };
+
+                await dbOps.put('photos', photoObj);
+
+                const percent = Math.round(((i + 1) / imageFiles.length) * 100);
+                progressBar.style.width = percent + '%';
+                progressText.textContent = percent + '%';
+            }
+
+            await loadDataFromDB();
+            closeModal('uploadModal');
+            renderApp();
+            showToast(`تمت إضافة ${imageFiles.length} صورة بنجاح!`);
+        }
+
+        // دعم السحب والإفلات في أي مكان على نافذة المتصفح
+        function setupGlobalDragAndDrop() {
+            const dropZone = document.getElementById('globalDropZone');
+            let dragCounter = 0;
+
+            window.addEventListener('dragenter', (e) => {
+                e.preventDefault();
+                dragCounter++;
+                if (e.dataTransfer.types.includes('Files')) {
+                    dropZone.classList.remove('hidden');
+                    dropZone.classList.add('flex');
+                }
+            });
+
+            window.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                dragCounter--;
+                if (dragCounter === 0) {
+                    dropZone.classList.add('hidden');
+                    dropZone.classList.remove('flex');
+                }
+            });
+
+            window.addEventListener('dragover', (e) => e.preventDefault());
+
+            window.addEventListener('drop', async (e) => {
+                e.preventDefault();
+                dragCounter = 0;
+                dropZone.classList.add('hidden');
+                dropZone.classList.remove('flex');
+
+                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                    // إذا كان المستخدم داخل ألبوم محدد، نضيف الصور له تلقائياً
+                    const targetAlbum = (state.currentView === 'album-detail') ? state.selectedAlbumId : '';
+                    document.getElementById('uploadAlbumSelect').innerHTML = `<option value="${targetAlbum}"></option>`;
+                    document.getElementById('uploadAlbumSelect').value = targetAlbum;
+                    await handleFilesSelected(e.dataTransfer.files);
+                }
+            });
+        }
+
+        /**
+         * 8. إدارة الصور (تفضيل، تعديل اسم، نقل، حذف، استعادة، تحميل)
+         */
+        async function toggleFavorite(photoId) {
+            const photo = state.photos.find(p => p.id === photoId);
+            if (!photo) return;
+            photo.isFavorite = !photo.isFavorite;
+            await dbOps.put('photos', photo);
+            updateSidebarCounts();
+            renderApp();
+            if (state.lightbox.isOpen) updateLightboxUI();
+            showToast(photo.isFavorite ? 'تمت الإضافة إلى المفضلة ❤️' : 'تمت الإزالة من المفضلة');
+        }
+
+        function openEditPhotoModal(photoId) {
+            const photo = state.photos.find(p => p.id === photoId);
+            if (!photo) return;
+
+            document.getElementById('editPhotoId').value = photo.id;
+            document.getElementById('editPhotoNameInput').value = photo.name;
+
+            const albumSelect = document.getElementById('editPhotoAlbumSelect');
+            albumSelect.innerHTML = `<option value="">بدون ألبوم</option>` +
+                state.albums.map(a => `<option value="${a.id}">${escapeHTML(a.name)}</option>`).join('');
+            albumSelect.value = photo.albumId || '';
+
+            openModal('editPhotoModal');
+            setTimeout(() => document.getElementById('editPhotoNameInput').focus(), 100);
+        }
+
+        async function savePhotoDetails() {
+            const id = document.getElementById('editPhotoId').value;
+            const newName = document.getElementById('editPhotoNameInput').value.trim();
+            const newAlbumId = document.getElementById('editPhotoAlbumSelect').value || null;
+
+            if (!newName) {
+                showToast('يرجى إدخال اسم للصورة', 'error');
+                return;
+            }
+
+            const photo = state.photos.find(p => p.id === id);
+            if (photo) {
+                photo.name = newName;
+                photo.albumId = newAlbumId;
+                await dbOps.put('photos', photo);
+                await loadDataFromDB();
+                closeModal('editPhotoModal');
+                renderApp();
+                if (state.lightbox.isOpen) updateLightboxUI();
+                showToast('تم تحديث بيانات الصورة بنجاح');
+            }
+        }
+
+        async function moveToTrash(photoId) {
+            const photo = state.photos.find(p => p.id === photoId);
+            if (!photo) return;
+            photo.isDeleted = true;
+            await dbOps.put('photos', photo);
+            updateSidebarCounts();
+            renderApp();
+            showToast('تم نقل الصورة إلى سلة المحذوفات');
+        }
+
+        async function restoreFromTrash(photoId) {
+            const photo = state.photos.find(p => p.id === photoId);
+            if (!photo) return;
+            photo.isDeleted = false;
+            await dbOps.put('photos', photo);
+            updateSidebarCounts();
+            renderApp();
+            showToast('تمت استعادة الصورة بنجاح');
+        }
+
+        async function permanentlyDeletePhoto(photoId) {
+            if (state.objectUrls[photoId]) {
+                URL.revokeObjectURL(state.objectUrls[photoId]);
+                delete state.objectUrls[photoId];
+            }
+            await dbOps.delete('photos', photoId);
+            await loadDataFromDB();
+            renderApp();
+            showToast('تم حذف الصورة نهائياً');
+        }
+
+        async function emptyTrash() {
+            const trashed = state.photos.filter(p => p.isDeleted);
+            for (const p of trashed) {
+                if (state.objectUrls[p.id]) {
+                    URL.revokeObjectURL(state.objectUrls[p.id]);
+                    delete state.objectUrls[p.id];
+                }
+                await dbOps.delete('photos', p.id);
+            }
+            await loadDataFromDB();
+            renderApp();
+            showToast('تم إفراغ سلة المحذوفات بالكامل');
+        }
+
+        /**
+         * 9. إدارة الألبومات (إنشاء، تعديل، حذف)
+         */
+        function openCreateAlbumModal() {
+            document.getElementById('albumModalTitle').textContent = 'إنشاء ألبوم جديد';
+            document.getElementById('editAlbumId').value = '';
+            document.getElementById('albumNameInput').value = '';
+            openModal('albumModal');
+            setTimeout(() => document.getElementById('albumNameInput').focus(), 100);
+        }
+
+        function openRenameAlbumModal(albumId) {
+            const album = state.albums.find(a => a.id === albumId);
+            if (!album) return;
+            document.getElementById('albumModalTitle').textContent = 'إعادة تسمية الألبوم';
+            document.getElementById('editAlbumId').value = album.id;
+            document.getElementById('albumNameInput').value = album.name;
+            openModal('albumModal');
+            setTimeout(() => document.getElementById('albumNameInput').focus(), 100);
+        }
+
+        async function saveAlbum() {
+            const id = document.getElementById('editAlbumId').value;
+            const name = document.getElementById('albumNameInput').value.trim();
+
+            if (!name) {
+                showToast('يرجى كتابة اسم الألبوم', 'error');
+                return;
+            }
+
+            if (id) {
+                const album = state.albums.find(a => a.id === id);
+                if (album) {
+                    album.name = name;
+                    await dbOps.put('albums', album);
+                    showToast('تمت إعادة تسمية الألبوم');
+                }
+            } else {
+                const newAlbum = {
+                    id: 'album_' + Date.now(),
+                    name: name,
+                    createdAt: Date.now()
+                };
+                await dbOps.put('albums', newAlbum);
+                showToast('تم إنشاء الألبوم بنجاح');
+            }
+
+            await loadDataFromDB();
+            closeModal('albumModal');
+            renderApp();
+        }
+
+        function openDeleteAlbumModal(albumId) {
+            const album = state.albums.find(a => a.id === albumId);
+            if (!album) return;
+            document.getElementById('deleteAlbumTargetId').value = album.id;
+            document.getElementById('deleteAlbumNameSpan').textContent = album.name;
+            openModal('deleteAlbumModal');
+        }
+
+        async function confirmDeleteAlbum(deletePhotosToo) {
+            const albumId = document.getElementById('deleteAlbumTargetId').value;
+            const albumPhotos = state.photos.filter(p => p.albumId === albumId);
+
+            for (const photo of albumPhotos) {
+                photo.albumId = null;
+                if (deletePhotosToo) {
+                    photo.isDeleted = true;
+                }
+                await dbOps.put('photos', photo);
+            }
+
+            await dbOps.delete('albums', albumId);
+            await loadDataFromDB();
+            closeModal('deleteAlbumModal');
+
+            if (state.currentView === 'album-detail' && state.selectedAlbumId === albumId) {
+                navigate('albums');
+            } else {
+                renderApp();
+            }
+            showToast('تم حذف الألبوم بنجاح');
+        }
+
+        /**
+         * 10. عارض الصور الاحترافي (Lightbox + Zoom + Pan + Keyboard)
+         */
+        function openLightbox(index) {
+            const list = window.currentRenderedPhotos || [];
+            if (!list[index]) return;
+
+            state.lightbox.isOpen = true;
+            state.lightbox.currentList = list;
+            state.lightbox.currentIndex = index;
+            resetZoom();
+
+            const modal = document.getElementById('lightboxModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.body.style.overflow = 'hidden';
+
+            updateLightboxUI();
+        }
+
+        function closeLightbox() {
+            state.lightbox.isOpen = false;
+            const modal = document.getElementById('lightboxModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            document.body.style.overflow = '';
+        }
+
+        function updateLightboxUI() {
+            const { currentList, currentIndex } = state.lightbox;
+            const photo = currentList[currentIndex];
+            if (!photo) return closeLightbox();
+
+            const img = document.getElementById('lbImage');
+            img.src = state.objectUrls[photo.id];
+
+            document.getElementById('lbPhotoTitle').textContent = photo.name;
+            const dateStr = new Date(photo.createdAt).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
+            const sizeKB = Math.round((photo.size || 0) / 1024);
+            document.getElementById('lbPhotoMeta').textContent = `${dateStr} • ${sizeKB} KB`;
+            document.getElementById('lbCounter').textContent = `${currentIndex + 1} / ${currentList.length}`;
+
+            // تحديث حالة زر المفضلة داخل العارض
+            const favBtn = document.getElementById('lbFavBtn');
+            if (photo.isFavorite) {
+                favBtn.classList.add('text-rose-500', 'bg-rose-500/20');
+                favBtn.querySelector('svg').classList.add('fill-current');
+            } else {
+                favBtn.classList.remove('text-rose-500', 'bg-rose-500/20');
+                favBtn.querySelector('svg').classList.remove('fill-current');
+            }
+
+            // إظهار أو إخفاء أزرار التنقل حسب الموقع
+            document.getElementById('lbPrevBtn').style.visibility = currentIndex > 0 ? 'visible' : 'hidden';
+            document.getElementById('lbNextBtn').style.visibility = currentIndex < currentList.length - 1 ? 'visible' : 'hidden';
+        }
+
+        function navigateLightbox(step) {
+            const newIndex = state.lightbox.currentIndex + step;
+            if (newIndex >= 0 && newIndex < state.lightbox.currentList.length) {
+                state.lightbox.currentIndex = newIndex;
+                resetZoom();
+                updateLightboxUI();
+            }
+        }
+
+        // التكبير والتصغير (Zoom)
+        function zoomLightbox(delta) {
+            let newZoom = state.lightbox.zoom + delta;
+            newZoom = Math.min(Math.max(newZoom, 0.5), 4); // بين 50% و 400%
+            state.lightbox.zoom = newZoom;
+            if (newZoom <= 1) {
+                state.lightbox.panX = 0;
+                state.lightbox.panY = 0;
+            }
+            applyLightboxTransform();
+        }
+
+        function resetZoom() {
+            state.lightbox.zoom = 1;
+            state.lightbox.panX = 0;
+            state.lightbox.panY = 0;
+            applyLightboxTransform();
+        }
+
+        function applyLightboxTransform() {
+            const img = document.getElementById('lbImage');
+            const { zoom, panX, panY } = state.lightbox;
+            img.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
+            const pct = Math.round(zoom * 100) + '%';
+            document.getElementById('zoomLevelText').textContent = pct;
+            document.getElementById('zoomLevelTextMobile').textContent = pct;
+        }
+
+        // دعم سحب الصورة عند التكبير + عجلة الفأرة للتكبير
+        function setupLightboxGestures() {
+            const container = document.getElementById('lbImageContainer');
+
+            container.addEventListener('wheel', (e) => {
+                if (!state.lightbox.isOpen) return;
+                e.preventDefault();
+                zoomLightbox(e.deltaY < 0 ? 0.2 : -0.2);
+            }, { passive: false });
+
+            container.addEventListener('mousedown', (e) => {
+                if (state.lightbox.zoom <= 1) return;
+                state.lightbox.isDragging = true;
+                state.lightbox.startX = e.clientX - state.lightbox.panX;
+                state.lightbox.startY = e.clientY - state.lightbox.panY;
+            });
+
+            window.addEventListener('mousemove', (e) => {
+                if (!state.lightbox.isDragging) return;
+                state.lightbox.panX = e.clientX - state.lightbox.startX;
+                state.lightbox.panY = e.clientY - state.lightbox.startY;
+                applyLightboxTransform();
+            });
+
+            window.addEventListener('mouseup', () => {
+                state.lightbox.isDragging = false;
+            });
+
+            // اختصارات لوحة المفاتيح للعارض
+            window.addEventListener('keydown', (e) => {
+                if (!state.lightbox.isOpen) return;
+                if (e.key === 'Escape') closeLightbox();
+                // في RTL: السهم الأيمن يعود للسابق (-1) والأيسر ينتقل للتالي (+1)
+                if (e.key === 'ArrowRight') navigateLightbox(-1);
+                if (e.key === 'ArrowLeft') navigateLightbox(1);
+                if (e.key === '+' || e.key === '=') zoomLightbox(0.25);
+                if (e.key === '-') zoomLightbox(-0.25);
+            });
+        }
+
+        // أزرار الإجراءات السريعة داخل العارض
+        function toggleCurrentLightboxFav() {
+            const photo = state.lightbox.currentList[state.lightbox.currentIndex];
+            if (photo) toggleFavorite(photo.id);
+        }
+
+        function editCurrentLightboxPhoto() {
+            const photo = state.lightbox.currentList[state.lightbox.currentIndex];
+            if (photo) openEditPhotoModal(photo.id);
+        }
+
+        function downloadCurrentLightboxPhoto() {
+            const photo = state.lightbox.currentList[state.lightbox.currentIndex];
+            if (!photo) return;
+            const a = document.createElement('a');
+            a.href = state.objectUrls[photo.id];
+            const ext = photo.type ? photo.type.split('/')[1].replace('svg+xml', 'svg') : 'png';
+            a.download = `${photo.name}.${ext}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            showToast('بدأ تحميل الصورة على جهازك');
+        }
+
+        async function deleteCurrentLightboxPhoto() {
+            const photo = state.lightbox.currentList[state.lightbox.currentIndex];
+            if (!photo) return;
+            await moveToTrash(photo.id);
+            state.lightbox.currentList.splice(state.lightbox.currentIndex, 1);
+            if (state.lightbox.currentList.length === 0) {
+                closeLightbox();
+            } else {
+                if (state.lightbox.currentIndex >= state.lightbox.currentList.length) {
+                    state.lightbox.currentIndex = state.lightbox.currentList.length - 1;
+                }
+                resetZoom();
+                updateLightboxUI();
+            }
+        }
+
+        /**
+         * 11. أدوات مساعدة للواجهة (Sidebar, Modals, Theme, Toasts)
+         */
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const backdrop = document.getElementById('sidebarBackdrop');
+            sidebar.classList.toggle('translate-x-full');
+            backdrop.classList.toggle('hidden');
+        }
+
+        function openModal(id) {
+            const el = document.getElementById(id);
+            el.classList.remove('hidden');
+            el.classList.add('flex');
+        }
+
+        function closeModal(id) {
+            const el = document.getElementById(id);
+            el.classList.add('hidden');
+            el.classList.remove('flex');
+        }
+
+        function initTheme() {
+            const saved = localStorage.getItem('gallery_theme');
+            if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            }
+        }
+
+        function toggleTheme() {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.setItem('gallery_theme', isDark ? 'dark' : 'light');
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            const bg = type === 'error' ? 'bg-rose-600' : 'bg-[#0F766E] dark:bg-[#2DD4BF] dark:text-slate-950';
+            toast.className = `${bg} text-white px-4 py-3 rounded-2xl shadow-xl text-sm font-bold flex items-center gap-2.5 animate-scale-up pointer-events-auto`;
+            toast.innerHTML = `
+                <span>${type === 'error' ? '⚠️' : '✨'}</span>
+                <span>${escapeHTML(message)}</span>
+            `;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function escapeHTML(str) {
+            return String(str).replace(/[&<>"']/g, m => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[m]));
+        }
+    </script>
+</body>
+</html>
